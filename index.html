@@ -1,101 +1,476 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111827">
 <title>Minha Biblioteca de Prompts</title>
+
 <style>
-body{font-family:Arial,sans-serif;background:#111827;color:white;padding:20px}
-button{padding:12px;margin:5px;border:0;border-radius:8px;cursor:pointer}
-textarea,input,select{box-sizing:border-box;width:100%;padding:12px;margin:8px 0}
-.card{background:#1f2937;padding:15px;margin:12px 0;border-radius:12px}
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 18px 14px 40px;
+  background: #111827;
+  color: #f9fafb;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+}
+
+main {
+  max-width: 760px;
+  margin: auto;
+}
+
+h1 { font-size: 26px; }
+
+p {
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 3px;
+}
+
+.primary {
+  background: #22c55e;
+  color: #052e16;
+}
+
+.secondary {
+  background: #374151;
+  color: white;
+}
+
+.danger {
+  background: #7f1d1d;
+  color: white;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.card, .editor {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 15px;
+  padding: 16px;
+  margin: 14px 0;
+}
+
+.card h2 { font-size: 18px; }
+
+.tag {
+  font-size: 12px;
+  background: #374151;
+  border-radius: 999px;
+  padding: 5px 9px;
+}
+
+.preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #d1d5db;
+  line-height: 1.5;
+  max-height: 120px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.actions button {
+  flex: 1;
+  min-width: 85px;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin: 12px 0 6px;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 9px;
+  border: 1px solid #4b5563;
+  background: #111827;
+  color: white;
+  font: inherit;
+  margin-bottom: 8px;
+}
+
+textarea {
+  min-height: 190px;
+  resize: vertical;
+}
+
+#editor { display: none; }
+
+.status {
+  min-height: 24px;
+  color: #86efac;
+  margin-top: 10px;
+}
+
+.note {
+  font-size: 13px;
+  color: #9ca3af;
+}
 </style>
 </head>
-<body>
-<h1>📚 Minha Biblioteca de Prompts</h1>
-<button onclick="novo()">＋ Adicionar prompt</button>
-<div id="form" hidden>
-<input id="nome" placeholder="Nome do prompt">
-<select id="cat">
-<option>Vídeos</option><option>Imagens</option>
-<option>YouTube</option><option>Outros</option>
-</select>
-<textarea id="texto" rows="8" placeholder="Digite seu prompt"></textarea>
-<button onclick="salvar()">Salvar</button>
-<button onclick="document.getElementById('form').hidden=true">Cancelar</button>
-</div>
-<div id="lista"></div>
-<script>
-const chave="meusPrompts";
-let prompts=JSON.parse(localStorage.getItem(chave)||"[]");
-let editando=null;
 
-function guardar(){
- localStorage.setItem(chave,JSON.stringify(prompts));
- mostrar();
+<body>
+<main>
+
+<h1>📚 Minha Biblioteca de Prompts</h1>
+
+<p>
+Adicione, edite e copie seus prompts.
+Exporte backups para guardar seus textos.
+</p>
+
+<div class="toolbar">
+  <button class="primary" id="addBtn">
+    ＋ Adicionar prompt
+  </button>
+
+  <button class="secondary" id="exportBtn">
+    ⬇ Exportar backup
+  </button>
+
+  <button class="secondary" id="importBtn">
+    ⬆ Importar backup
+  </button>
+
+  <input
+    id="importFile"
+    type="file"
+    accept=".json,application/json"
+    hidden
+  >
+</div>
+
+<div class="editor" id="editor">
+  <h2 id="editorTitle">Novo prompt</h2>
+
+  <label for="title">Nome do prompt</label>
+  <input id="title" placeholder="Ex.: Animação de quadrinhos">
+
+  <label for="category">Categoria</label>
+  <select id="category">
+    <option>Vídeos</option>
+    <option>Imagens</option>
+    <option>YouTube</option>
+    <option>Áudio e voz</option>
+    <option>Estudos</option>
+    <option>Outros</option>
+  </select>
+
+  <label for="body">Texto do prompt</label>
+  <textarea
+    id="body"
+    placeholder="Escreva ou cole seu prompt aqui..."
+  ></textarea>
+
+  <div class="toolbar">
+    <button class="primary" id="saveBtn">
+      Salvar prompt
+    </button>
+
+    <button class="secondary" id="cancelBtn">
+      Cancelar
+    </button>
+  </div>
+
+  <div class="status" id="editorStatus"></div>
+</div>
+
+<div id="list"></div>
+
+<div class="status" id="mainStatus" role="status"></div>
+
+<p class="note">
+Os prompts ficam salvos neste navegador. Exporte backups
+regularmente e guarde o arquivo JSON no app Arquivos ou iCloud.
+A biblioteca não sincroniza automaticamente entre dispositivos.
+</p>
+
+</main>
+
+<script>
+const STORAGE_KEY = "minhaBibliotecaPrompts_v2";
+
+const initialPrompts = [
+  {
+    id: 1,
+    title: "Comic strip — YouTube Create",
+    category: "Vídeos",
+    text: "Animate the uploaded 2D political comic strip in its original cartoon style. This is an illustrated comic, not live-action footage. Preserve the existing drawings, characters, colors, and six-panel layout. Create gentle camera movements that focus on each panel in reading order. Remove the speech bubbles from view while keeping the artwork consistent. Add English voice narration reading the dialogue from the comic. Do not generate photorealistic people, new faces, subtitles, captions, or text overlays. Do not change the original illustrations or invent dialogue. Keep everything stylized, clearly illustrated, and faithful to the source image."
+  }
+];
+
+let prompts;
+
+try {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  prompts = saved ? JSON.parse(saved) : initialPrompts;
+} catch (error) {
+  prompts = initialPrompts;
 }
-function novo(){
- editando=null;
- nome.value="";
- texto.value="";
- cat.value="Vídeos";
- form.hidden=false;
+
+let editingId = null;
+
+const $ = id => document.getElementById(id);
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(prompts));
 }
-function salvar(){
- if(!nome.value.trim()||!texto.value.trim()){
-  alert("Preencha o nome e o texto.");
-  return;
- }
- if(editando===null){
-  prompts.push({id:Date.now(),nome:nome.value,
-   cat:cat.value,texto:texto.value});
- }else{
-  let p=prompts.find(x=>x.id===editando);
-  p.nome=nome.value;p.cat=cat.value;p.texto=texto.value;
- }
- form.hidden=true;
- guardar();
+
+function render() {
+  const list = $("list");
+
+  if (prompts.length === 0) {
+    list.innerHTML =
+      '<div class="card">Você ainda não tem prompts. Toque em Adicionar prompt.</div>';
+    return;
+  }
+
+  list.innerHTML = prompts.map(p => `
+    <article class="card">
+      <h2>${escapeHTML(p.title)}</h2>
+      <span class="tag">${escapeHTML(p.category || "Outros")}</span>
+
+      <div class="preview">${escapeHTML(p.text)}</div>
+
+      <div class="actions">
+        <button class="primary" data-copy="${p.id}">
+          📋 Copiar
+        </button>
+
+        <button class="secondary" data-edit="${p.id}">
+          ✏️ Editar
+        </button>
+
+        <button class="danger" data-delete="${p.id}">
+          🗑️ Excluir
+        </button>
+      </div>
+    </article>
+  `).join("");
 }
-function mostrar(){
- lista.innerHTML="";
- prompts.forEach(p=>{
-  let d=document.createElement("div");
-  d.className="card";
-  let h=document.createElement("h3");
-  h.textContent=p.nome;
-  let c=document.createElement("p");
-  c.textContent=p.cat;
-  let b=document.createElement("button");
-  b.textContent="📋 Copiar";
-  b.onclick=async()=>{
-   try{
-    await navigator.clipboard.writeText(p.texto);
-    alert("Prompt copiado!");
-   }catch(e){
-    alert("Abra a página no navegador para copiar.");
-   }
-  };
-  let ed=document.createElement("button");
-  ed.textContent="✏️ Editar";
-  ed.onclick=()=>{
-   editando=p.id;nome.value=p.nome;
-   texto.value=p.texto;cat.value=p.cat;
-   form.hidden=false;
-  };
-  let del=document.createElement("button");
-  del.textContent="🗑️ Excluir";
-  del.onclick=()=>{
-   if(confirm("Excluir este prompt?")){
-    prompts=prompts.filter(x=>x.id!==p.id);
-    guardar();
-   }
-  };
-  d.append(h,c,b,ed,del);
-  lista.appendChild(d);
- });
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
 }
-mostrar();
+
+function showEditor(prompt = null) {
+  editingId = prompt ? prompt.id : null;
+
+  $("editorTitle").textContent =
+    prompt ? "Editar prompt" : "Novo prompt";
+
+  $("title").value = prompt ? prompt.title : "";
+  $("category").value = prompt ? prompt.category : "Vídeos";
+  $("body").value = prompt ? prompt.text : "";
+
+  $("editorStatus").textContent = "";
+  $("editor").style.display = "block";
+
+  $("editor").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
+
+$("addBtn").onclick = () => showEditor();
+
+$("cancelBtn").onclick = () => {
+  $("editor").style.display = "none";
+  editingId = null;
+};
+
+$("saveBtn").onclick = () => {
+  const title = $("title").value.trim();
+  const text = $("body").value.trim();
+  const category = $("category").value;
+
+  if (!title || !text) {
+    $("editorStatus").textContent =
+      "Preencha o nome e o texto do prompt.";
+    return;
+  }
+
+  if (editingId !== null) {
+    const prompt = prompts.find(p => p.id === editingId);
+
+    if (prompt) {
+      prompt.title = title;
+      prompt.category = category;
+      prompt.text = text;
+    }
+  } else {
+    prompts.unshift({
+      id: Date.now(),
+      title,
+      category,
+      text
+    });
+  }
+
+  persist();
+  render();
+
+  $("editor").style.display = "none";
+  $("mainStatus").textContent = "Prompt salvo neste navegador.";
+};
+
+$("list").addEventListener("click", async event => {
+  const button = event.target.closest("button");
+  if (!button) return;
+
+  if (button.dataset.copy) {
+    const prompt = prompts.find(
+      p => String(p.id) === button.dataset.copy
+    );
+
+    if (!prompt) return;
+
+    try {
+      await navigator.clipboard.writeText(prompt.text);
+      $("mainStatus").textContent =
+        "✅ Prompt copiado: " + prompt.title;
+    } catch (error) {
+      const textarea = document.createElement("textarea");
+      textarea.value = prompt.text;
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      const success = document.execCommand("copy");
+      textarea.remove();
+
+      $("mainStatus").textContent = success
+        ? "✅ Prompt copiado!"
+        : "Não foi possível copiar automaticamente.";
+    }
+  }
+
+  if (button.dataset.edit) {
+    const prompt = prompts.find(
+      p => String(p.id) === button.dataset.edit
+    );
+
+    if (prompt) showEditor(prompt);
+  }
+
+  if (button.dataset.delete) {
+    const prompt = prompts.find(
+      p => String(p.id) === button.dataset.delete
+    );
+
+    if (
+      prompt &&
+      confirm('Excluir o prompt "' + prompt.title + '"?')
+    ) {
+      prompts = prompts.filter(p => p.id !== prompt.id);
+      persist();
+      render();
+      $("mainStatus").textContent = "Prompt excluído.";
+    }
+  }
+});
+
+$("exportBtn").onclick = () => {
+  const blob = new Blob(
+    [JSON.stringify(prompts, null, 2)],
+    { type: "application/json" }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "backup-meus-prompts.json";
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  $("mainStatus").textContent =
+    "Backup exportado. Guarde o arquivo em local seguro.";
+};
+
+$("importBtn").onclick = () => $("importFile").click();
+
+$("importFile").onchange = async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const data = JSON.parse(await file.text());
+
+    if (
+      !Array.isArray(data) ||
+      !data.every(p => p.title && p.text)
+    ) {
+      throw new Error("Arquivo inválido");
+    }
+
+    if (confirm("Importar " + data.length + " prompts?")) {
+      const existing = new Set(
+        prompts.map(p => p.title + "|" + p.text)
+      );
+
+      const incoming = data
+        .filter(p => !existing.has(p.title + "|" + p.text))
+        .map(p => ({
+          ...p,
+          id: Date.now() + Math.random()
+        }));
+
+      prompts = [...incoming, ...prompts];
+
+      persist();
+      render();
+
+      $("mainStatus").textContent =
+        "Backup importado com sucesso.";
+    }
+  } catch (error) {
+    $("mainStatus").textContent =
+      "Arquivo inválido. Selecione um backup JSON válido.";
+  }
+
+  event.target.value = "";
+};
+
+render();
 </script>
+
 </body>
 </html>
