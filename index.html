@@ -1,0 +1,101 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minha Biblioteca de Prompts</title>
+<style>
+body{font-family:Arial,sans-serif;background:#111827;color:white;padding:20px}
+button{padding:12px;margin:5px;border:0;border-radius:8px;cursor:pointer}
+textarea,input,select{box-sizing:border-box;width:100%;padding:12px;margin:8px 0}
+.card{background:#1f2937;padding:15px;margin:12px 0;border-radius:12px}
+</style>
+</head>
+<body>
+<h1>📚 Minha Biblioteca de Prompts</h1>
+<button onclick="novo()">＋ Adicionar prompt</button>
+<div id="form" hidden>
+<input id="nome" placeholder="Nome do prompt">
+<select id="cat">
+<option>Vídeos</option><option>Imagens</option>
+<option>YouTube</option><option>Outros</option>
+</select>
+<textarea id="texto" rows="8" placeholder="Digite seu prompt"></textarea>
+<button onclick="salvar()">Salvar</button>
+<button onclick="document.getElementById('form').hidden=true">Cancelar</button>
+</div>
+<div id="lista"></div>
+<script>
+const chave="meusPrompts";
+let prompts=JSON.parse(localStorage.getItem(chave)||"[]");
+let editando=null;
+
+function guardar(){
+ localStorage.setItem(chave,JSON.stringify(prompts));
+ mostrar();
+}
+function novo(){
+ editando=null;
+ nome.value="";
+ texto.value="";
+ cat.value="Vídeos";
+ form.hidden=false;
+}
+function salvar(){
+ if(!nome.value.trim()||!texto.value.trim()){
+  alert("Preencha o nome e o texto.");
+  return;
+ }
+ if(editando===null){
+  prompts.push({id:Date.now(),nome:nome.value,
+   cat:cat.value,texto:texto.value});
+ }else{
+  let p=prompts.find(x=>x.id===editando);
+  p.nome=nome.value;p.cat=cat.value;p.texto=texto.value;
+ }
+ form.hidden=true;
+ guardar();
+}
+function mostrar(){
+ lista.innerHTML="";
+ prompts.forEach(p=>{
+  let d=document.createElement("div");
+  d.className="card";
+  let h=document.createElement("h3");
+  h.textContent=p.nome;
+  let c=document.createElement("p");
+  c.textContent=p.cat;
+  let b=document.createElement("button");
+  b.textContent="📋 Copiar";
+  b.onclick=async()=>{
+   try{
+    await navigator.clipboard.writeText(p.texto);
+    alert("Prompt copiado!");
+   }catch(e){
+    alert("Abra a página no navegador para copiar.");
+   }
+  };
+  let ed=document.createElement("button");
+  ed.textContent="✏️ Editar";
+  ed.onclick=()=>{
+   editando=p.id;nome.value=p.nome;
+   texto.value=p.texto;cat.value=p.cat;
+   form.hidden=false;
+  };
+  let del=document.createElement("button");
+  del.textContent="🗑️ Excluir";
+  del.onclick=()=>{
+   if(confirm("Excluir este prompt?")){
+    prompts=prompts.filter(x=>x.id!==p.id);
+    guardar();
+   }
+  };
+  d.append(h,c,b,ed,del);
+  lista.appendChild(d);
+ });
+}
+mostrar();
+</script>
+</body>
+</html>
